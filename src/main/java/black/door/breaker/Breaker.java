@@ -26,6 +26,7 @@ public class Breaker {
 	 * in seconds
 	 */
 	public static final long DEFAULT_TIMEOUT;
+	public static final boolean DEFAULT_RESET_ON_SUCCESS;
 	private static final ScheduledExecutorService TIMEOUT_EXECUTOR;
 
 	static {
@@ -37,6 +38,7 @@ public class Breaker {
 		DEFAULT_FAILURE_THRESHOLD = conf.getInt("black.door.breaker.defaultFailureThresh");
 		DEFAULT_SUCCESS_THRESHOLD = conf.getInt("black.door.breaker.defaultSuccessThresh");
 		DEFAULT_TIMEOUT = conf.getLong("black.door.breaker.defaultTimeout");
+		DEFAULT_RESET_ON_SUCCESS = conf.getBoolean("black.door.breaker.defaultResetOnSuccess");
 	}
 
 	//region properties
@@ -84,6 +86,7 @@ public class Breaker {
 	 *
 	 * Useful for logging or alert generation.
 	 */
+	@Getter(AccessLevel.NONE)
 	private Consumer<Instant> onTrip;
 
 	/**
@@ -92,6 +95,7 @@ public class Breaker {
 	 *
 	 * Useful for logging or alert generation.
 	 */
+	@Getter(AccessLevel.NONE)
 	private Consumer<Instant> onReset;
 
 	@Getter(AccessLevel.NONE)
@@ -126,7 +130,7 @@ public class Breaker {
 		failures = new AtomicInteger();
 		successes = new AtomicInteger();
 		state = CLOSED;
-		resetOnSuccess = true;
+		resetOnSuccess = DEFAULT_RESET_ON_SUCCESS;
 
 		onTimeout = buildOnTimeout();
 	}
@@ -340,12 +344,12 @@ public class Breaker {
 		return this;
 	}
 
-	public Breaker setOnTrip(Consumer<Instant> onTrip) {
+	public Breaker onTrip(Consumer<Instant> onTrip) {
 		this.onTrip = onTrip;
 		return this;
 	}
 
-	public Breaker setOnReset(Consumer<Instant> onReset) {
+	public Breaker onReset(Consumer<Instant> onReset) {
 		this.onReset = onReset;
 		return this;
 	}

@@ -43,8 +43,8 @@ public class BreakerTest {
 		AtomicBoolean r = new AtomicBoolean(false);
 
 		Breaker breaker = new Breaker()
-				.setOnTrip(i -> t.set(true))
-				.setOnReset(i -> r.set(true));
+				.onTrip(i -> t.set(true))
+				.onReset(i -> r.set(true));
 
 		breaker.trip();
 		breaker.reset();

@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static black.door.breaker.State.*;
 
@@ -26,7 +27,6 @@ public class Breaker {
 	 * in seconds
 	 */
 	public static final long DEFAULT_TIMEOUT;
-	public static final boolean DEFAULT_RESET_ON_SUCCESS;
 	private static final ScheduledExecutorService TIMEOUT_EXECUTOR;
 
 	static {
@@ -38,7 +38,6 @@ public class Breaker {
 		DEFAULT_FAILURE_THRESHOLD = conf.getInt("black.door.breaker.defaultFailureThresh");
 		DEFAULT_SUCCESS_THRESHOLD = conf.getInt("black.door.breaker.defaultSuccessThresh");
 		DEFAULT_TIMEOUT = conf.getLong("black.door.breaker.defaultTimeout");
-		DEFAULT_RESET_ON_SUCCESS = conf.getBoolean("black.door.breaker.defaultResetOnSuccess");
 	}
 
 	//region properties
@@ -130,7 +129,6 @@ public class Breaker {
 		failures = new AtomicInteger();
 		successes = new AtomicInteger();
 		state = CLOSED;
-		resetOnSuccess = DEFAULT_RESET_ON_SUCCESS;
 
 		onTimeout = buildOnTimeout();
 	}
@@ -167,10 +165,10 @@ public class Breaker {
 		}
 	}
 
-	private void succeed(){
+	protected void succeed(){
 		switch (state){
 			case CLOSED:
-				if(resetOnSuccess)
+				if(successes.incrementAndGet() >= successThreshold)
 					failures.set(0);
 				break;
 			case HALF_OPEN:
@@ -179,7 +177,6 @@ public class Breaker {
 				}
 				break;
 		}
-
 	}
 
 	//endregion
@@ -194,6 +191,7 @@ public class Breaker {
 			if(state != CLOSED){
 				state = CLOSED;
 				failures.set(0);
+				successes.set(0);
 				timeoutEvent.cancel(false);
 				if(onReset != null){
 					onReset.accept(Instant.now());
@@ -325,6 +323,15 @@ public class Breaker {
 
 			throw new RuntimeException(e);
 		}
+	}
+
+	public <V> Future<V> executeAsync(Supplier<? extends Future<V>> op)
+			throws CircuitBreakerClosedException{
+		if(!testable())
+			throw new CircuitBreakerClosedException();
+
+		Future<V> f = op.get();
+		return new CircuitFuture<>(f, this);
 	}
 
 	//region configuration

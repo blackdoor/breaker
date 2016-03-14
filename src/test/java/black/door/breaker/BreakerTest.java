@@ -2,8 +2,10 @@ package black.door.breaker;
 
 import org.junit.Test;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Callable;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
@@ -34,6 +36,51 @@ public class BreakerTest {
 		//ensure breaker is open
 		assertFalse(breaker.testable());
 		assertFalse(breaker.execute(goodCommand, true).isPresent());
+	}
+
+	@Test
+	public void testAsync(){
+		Breaker breaker = new Breaker();
+
+		ExecutorService ex = Executors.newCachedThreadPool();
+
+		int failThresh = breaker.getFailureThreshold();
+
+		Callable goodCommand = Object::new;
+		Callable badCommand = () -> {throw new Exception();};
+
+		List<Future> futures = new LinkedList<>();
+
+		try {
+			breaker.executeAsync(() -> ex.submit(goodCommand)).get();
+		} catch (CircuitBreakerClosedException | InterruptedException | ExecutionException e) {
+			fail();
+		}
+
+		//trip the breaker
+		for(int i = failThresh; i --> 0;){
+			try {
+				futures.add(breaker.executeAsync(() -> ex.submit(badCommand)));
+			} catch (CircuitBreakerClosedException e) {
+				fail("trip too soon");
+			}
+		}
+
+		System.out.println(breaker);
+
+		futures.forEach(future -> {
+			try {
+				future.get();
+				fail();
+			} catch (InterruptedException | ExecutionException ignored) {}
+		});
+
+		//ensure breaker is open
+		assertFalse(breaker.testable());
+		try {
+			breaker.executeAsync(() -> ex.submit(goodCommand));
+			fail();
+		} catch (CircuitBreakerClosedException ignored) {}
 	}
 
 	@Test

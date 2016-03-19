@@ -168,8 +168,10 @@ public class Breaker {
 	protected void succeed(){
 		switch (state){
 			case CLOSED:
-				if(successes.incrementAndGet() >= successThreshold)
+				if(successes.incrementAndGet() >= successThreshold){
 					failures.set(0);
+					successes.set(0);
+				}
 				break;
 			case HALF_OPEN:
 				if(successes.incrementAndGet() >= successThreshold){

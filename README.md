@@ -1,6 +1,11 @@
 # breaker
 Simple, robust circuit breaker for java; and nothing else.
 
+## Download
+
+[![Release](https://jitpack.io/v/blackdoor/breaker.svg)](https://jitpack.io/#blackdoor/breaker)
+
+
 ## Concept
 
 The circuit breaker pattern is used to create [fail-fast](https://en.wikipedia.org/wiki/Fail-fast) systems. Any time a component in the flow of the system (the circuit) is broken, that system typically responds slowly to users since it has to wait for timeouts to confirm failure of the broken component. With circuit breakers, when the component breaks the breaker trips and any subsequent attempts to access the broken component instantly return with an error. After some timeout, the breaker attempts to reset itself by detecting if the component is still broken. If it is then the breaker trips again and continues to fail fast, but if not the breaker resets and the system can be used again as normal.
